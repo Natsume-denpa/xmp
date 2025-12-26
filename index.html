@@ -19,40 +19,16 @@
             font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Segoe UI", Roboto, sans-serif; 
             background: var(--bg); 
             color: var(--text-main); 
-            margin: 0; 
-            padding: 0;
-            display: flex;
-            justify-content: center;
+            margin: 0; padding: 0;
+            display: flex; justify-content: center;
             min-height: 100vh;
         }
 
-        .container { 
-            width: 100%;
-            max-width: 500px; 
-            padding: 20px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .main-card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-        }
-
+        .container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .main-card { background: var(--card-bg); border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
         h1 { font-size: 1.25rem; text-align: center; margin: 0 0 20px; font-weight: 800; }
 
-        #drop-zone { 
-            border: 2px dashed #cfd9de; 
-            border-radius: 16px; 
-            padding: 50px 20px; 
-            text-align: center; 
-            cursor: pointer; 
-            background: #fafafa;
-            transition: 0.2s;
-        }
+        #drop-zone { border: 2px dashed #cfd9de; border-radius: 16px; padding: 50px 20px; text-align: center; cursor: pointer; background: #fafafa; transition: 0.2s; }
         #drop-zone:hover { border-color: var(--primary); background: #f0f7ff; }
         #drop-zone p { margin: 0; font-weight: bold; }
         #drop-zone span { font-size: 0.8rem; color: var(--text-sub); display: block; margin-top: 8px; }
@@ -60,69 +36,22 @@
         #status { margin: 15px 0; text-align: center; font-weight: bold; font-size: 0.9rem; min-height: 24px; color: var(--primary); }
 
         #preview-area { display: none; }
-        video { 
-            width: 100%; 
-            border-radius: 12px; 
-            background: #000; 
-            margin-bottom: 20px;
-        }
+        video { width: 100%; border-radius: 12px; background: #000; margin-bottom: 20px; }
 
         .controls { display: flex; flex-direction: column; gap: 15px; }
-        
         .input-label { font-size: 0.85rem; font-weight: bold; color: var(--text-sub); margin-bottom: 5px; display: block; }
         
-        #tweet-text { 
-            width: 100%; 
-            padding: 12px; 
-            border: 1px solid #cfd9de; 
-            border-radius: 12px; 
-            font-family: inherit; 
-            font-size: 1rem;
-            box-sizing: border-box;
-            resize: none;
-            background: #fff;
-        }
+        #tweet-text { width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 12px; font-family: inherit; font-size: 1rem; box-sizing: border-box; resize: none; }
 
         .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 5px; }
-        
-        .btn { 
-            padding: 14px; 
-            border-radius: 12px; 
-            border: none; 
-            cursor: pointer; 
-            font-weight: 800; 
-            text-decoration: none; 
-            font-size: 1rem; 
-            text-align: center; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.2s;
-        }
+        .btn { padding: 14px; border-radius: 12px; border: none; cursor: pointer; font-weight: 800; text-decoration: none; font-size: 1rem; text-align: center; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         
         .btn-dl { background: var(--success); color: white; }
         .btn-tw { background: var(--x-black); color: white; }
         .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn:active { transform: translateY(0); }
 
-        .footer-info { 
-            margin-top: 30px;
-            font-size: 0.75rem; 
-            color: var(--text-sub); 
-            line-height: 1.6;
-            text-align: center;
-        }
-
-        .reset-link { 
-            display: block; 
-            margin: 20px auto 0; 
-            color: var(--text-sub); 
-            text-decoration: underline; 
-            font-size: 0.8rem;
-            border: none;
-            background: none;
-            cursor: pointer;
-        }
+        .footer-info { margin-top: 30px; font-size: 0.75rem; color: var(--text-sub); line-height: 1.6; text-align: center; }
+        .reset-link { display: block; margin: 20px auto 0; color: var(--text-sub); text-decoration: underline; font-size: 0.8rem; border: none; background: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -160,7 +89,7 @@
 
     <div class="footer-info">
         <p>変換された動画の権利は元の画像の所有者に帰属します。</p>
-        <p>画像や動画はサーバーに一切保存されません。<br>(すべての処理はブラウザ上で行われます)</p>
+        <p>画像や動画はサーバーに一切保存されません。</p>
     </div>
 </div>
 
@@ -175,17 +104,24 @@
     dropZone.onclick = () => fileInput.click();
     fileInput.onchange = (e) => { if (e.target.files[0]) processImage(e.target.files[0]); };
 
+    function fixWebmDuration(blob, duration) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const buffer = e.target.result;
+                const view = new DataView(buffer);
+                resolve(new Blob([buffer], { type: blob.type }));
+            };
+            reader.readAsArrayBuffer(blob);
+        });
+    }
+
     async function processImage(file) {
         const buffer = await file.arrayBuffer();
         const text = new TextDecoder().decode(new Uint8Array(buffer)).toLowerCase();
-    const SIGS = [
-        "chatgpt", "dall-e", "openai", "google", "gemini", "deepmind", "imagen",
-        "grok", "xai", "midjourney", "nijijourney", "stable diffusion", "automatic1111", 
-        "comfyui", "novelai", "civitai", "sdxl", "adobe firefly", "bing image creator", 
-        "microsoft designer", "generated by", "created with"
-    ];
+        const SIGS = ["chatgpt", "dall-e", "openai", "google", "gemini", "midjourney", "stable diffusion", "novelai"];
         if (SIGS.some(s => text.includes(s))) {
-            status.innerHTML = `<span style="color:#d93025">AI生成画像の疑いがあるため、ご利用いただけません。</span>`;
+            status.innerHTML = `<span style="color:#d93025">AI生成画像の疑いがあるため利用不可</span>`;
             return;
         }
 
@@ -202,14 +138,13 @@
         const ctx = canvas.getContext('2d');
 
         let mimeType = 'video/mp4;codecs=avc1';
-        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/mp4';
-        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp9';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=h264';
         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
 
         const stream = canvas.captureStream(30);
         const recorder = new MediaRecorder(stream, {
             mimeType: mimeType,
-            videoBitsPerSecond: 4000000 
+            videoBitsPerSecond: 3000000 
         });
 
         const chunks = [];
@@ -223,23 +158,33 @@
         }
         draw();
 
-        recorder.onstop = () => {
+        recorder.onstop = async () => {
             active = false;
-            const blob = new Blob(chunks, { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+            let finalBlob = new Blob(chunks, { type: mimeType });
+            
+            const url = URL.createObjectURL(finalBlob);
             
             videoEl.src = url;
-            videoEl.load();
+            videoEl.onloadedmetadata = () => {
+                if (videoEl.duration === Infinity) {
+                    videoEl.currentTime = 1e101;
+                    videoEl.ontimeupdate = () => {
+                        videoEl.currentTime = 0;
+                        videoEl.ontimeupdate = null;
+                    };
+                }
+            };
+
             previewArea.style.display = "block";
-            status.innerText = "生成が完了しました";
+            status.innerText = "完了！保存して投稿してください";
 
             dlLink.href = url;
+            const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
             dlLink.download = `video_${Date.now()}.${ext}`;
         };
 
         recorder.start(100); 
-        setTimeout(() => { if(recorder.state === "recording") recorder.stop(); }, 3200);
+        setTimeout(() => { if(recorder.state === "recording") recorder.stop(); }, 5000);
     }
 
     document.getElementById('tweet-btn').onclick = () => {
@@ -247,8 +192,7 @@
         window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
     };
 
-    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.style.borderColor = "var(--primary)"; };
-    dropZone.ondragleave = () => { dropZone.style.borderColor = "#cfd9de"; };
+    dropZone.ondragover = (e) => { e.preventDefault(); };
     dropZone.ondrop = (e) => { e.preventDefault(); processImage(e.dataTransfer.files[0]); };
 </script>
 
