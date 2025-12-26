@@ -4,20 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>静止画メーカー</title>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <style>
         :root { --primary: #0070f3; --error: #d93025; --success: #28a745; --bg: #f8f9fa; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: #333; line-height: 1.6; padding: 20px; }
         .container { max-width: 700px; margin: 0 auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         h1 { text-align: center; font-size: 1.5rem; margin-bottom: 30px; }
         
-        #drop-zone { border: 2px dashed #ddd; border-radius: 12px; padding: 60px 20px; text-align: center; cursor: pointer; transition: 0.2s; background: #fafafa; }
+        #drop-zone { border: 2px dashed #ddd; border-radius: 12px; padding: 60px 20px; text-align: center; cursor: pointer; transition: 0.2s; background: #fafafa; position: relative; }
         #drop-zone:hover { border-color: var(--primary); background: #f0f7ff; }
         #drop-zone.disabled { opacity: 0.5; pointer-events: none; }
         
         #status { margin-top: 25px; text-align: center; font-weight: bold; min-height: 24px; font-size: 0.95rem; }
         
         .error-text { color: var(--error); padding: 10px; font-weight: bold; }
+        .loading-text { color: #666; font-size: 0.9rem; }
         
         #preview-area { display: none; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 30px; }
         video { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: #000; }
@@ -41,7 +41,7 @@
         <input type="file" id="file-input" accept="image/*" style="display: none;">
     </div>
 
-    <div id="status">システム準備中...</div>
+    <div id="status" class="loading-text">システム起動中...</div>
 
     <div id="preview-area">
         <video id="output-video" controls loop playsinline></video>
@@ -54,27 +54,34 @@
     </div>
 </div>
 
-<script>
-    let ffmpeg = null;
-    let createFFmpeg, fetchFile;
+<script type="module">
+    import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
+    import { fetchFile, toBlobURL } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
 
+    let ffmpeg = null;
     const dropZone = document.getElementById('drop-zone');
     const status = document.getElementById('status');
     const fileInput = document.getElementById('file-input');
     const previewArea = document.getElementById('preview-area');
     const videoEl = document.getElementById('output-video');
 
-    window.onload = async () => {
+    async function init() {
         try {
-            if (typeof FFmpeg === 'undefined') throw new Error();
-            createFFmpeg = FFmpeg.createFFmpeg;
-            fetchFile = FFmpeg.fetchFile;
-            status.innerText = ""; 
+            status.innerText = "エンジン準備中...";
+            ffmpeg = new FFmpeg();
+            const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm';
+            await ffmpeg.load({
+                coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+                wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+            });
+            status.innerText = "";
             dropZone.classList.remove('disabled');
         } catch (e) {
-            status.innerHTML = `<div class="error-text">システムエラーが発生しました。再読み込みしてください。</div>`;
+            status.innerHTML = `<div class="error-text">起動に失敗しました。ページを更新してください。</div>`;
         }
-    };
+    }
+    
+    init();
 
     dropZone.onclick = () => { if (!dropZone.classList.contains('disabled')) fileInput.click(); };
     fileInput.onchange = (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); };
@@ -90,15 +97,56 @@
     async function handleUpload(file) {
         status.innerText = "処理中...";
         previewArea.style.display = "none";
+        dropZone.classList.add('disabled');
 
         try {
             const isAI = await checkAI(file);
             if (isAI) {
                 status.innerHTML = `<div class="error-text">AIの疑いを検出したためご利用いただけません。</div>`;
+                dropZone.classList.remove('disabled');
                 return;
             }
-            await generateVideo(file);
+
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            await img.decode();
+
+            const ext = file.name.split('.').pop();
+            const inputName = `input.${ext}`;
+            
+            await ffmpeg.writeFile(inputName, await fetchFile(file));
+
+            await ffmpeg.exec([
+                '-loop', '1', 
+                '-i', inputName, 
+                '-t', '1',                    
+                '-c:v', 'libx264', 
+                '-crf', '18', 
+                '-pix_fmt', 'yuv420p',
+                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', 
+                'output.mp4'
+            ]);
+
+            const data = await ffmpeg.readFile('output.mp4');
+            const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+
+            status.innerText = "完了しました";
+            videoEl.src = url;
+            document.getElementById('res-display').innerText = `${img.width} x ${img.height}`;
+            previewArea.style.display = "block";
+            
+            const dl = document.getElementById('download-link');
+            dl.href = url;
+            dl.download = `video_${Date.now()}.mp4`;
+            
+            const txt = encodeURIComponent("画像を動画に変換しました。");
+            document.getElementById('tweet-link').href = `https://twitter.com/intent/tweet?text=${txt}`;
+            
+            dropZone.classList.remove('disabled');
+            try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile('output.mp4'); } catch(e){}
+
         } catch (e) {
+            dropZone.classList.remove('disabled');
             status.innerHTML = `<div class="error-text">処理中にエラーが発生しました。</div>`;
         }
     }
@@ -133,48 +181,6 @@
             };
             reader.readAsArrayBuffer(file);
         });
-    }
-
-    async function generateVideo(file) {
-        if (!ffmpeg) {
-            ffmpeg = createFFmpeg({ 
-                log: false,
-                corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
-            });
-            await ffmpeg.load();
-        }
-
-        const img = new Image();
-        img.src = URL.createObjectURL(file);
-        await img.decode();
-        
-        const ext = file.name.split('.').pop();
-        const inputName = `input.${ext}`;
-        ffmpeg.FS('writeFile', inputName, await fetchFile(file));
-
-        await ffmpeg.run(
-            '-loop', '1', '-i', inputName, '-t', '1',                    
-            '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p',
-            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', 
-            'output.mp4'
-        );
-
-        const data = ffmpeg.FS('readFile', 'output.mp4');
-        const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-
-        status.innerText = "完了しました";
-        videoEl.src = url;
-        document.getElementById('res-display').innerText = `${img.width} x ${img.height}`;
-        previewArea.style.display = "block";
-        
-        const dl = document.getElementById('download-link');
-        dl.href = url;
-        dl.download = `video_${Date.now()}.mp4`;
-        
-        const txt = encodeURIComponent("画像を動画に変換しました。");
-        document.getElementById('tweet-link').href = `https://twitter.com/intent/tweet?text=${txt}`;
-        
-        try { ffmpeg.FS('unlink', inputName); ffmpeg.FS('unlink', 'output.mp4'); } catch(e){}
     }
 </script>
 
