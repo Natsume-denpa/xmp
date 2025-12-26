@@ -2,65 +2,165 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>静止画メーカー</title>
     <style>
-        :root { --primary: #0070f3; --error: #d93025; --success: #28a745; --bg: #f8f9fa; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: #333; line-height: 1.6; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        h1 { text-align: center; font-size: 1.4rem; margin-bottom: 25px; }
+        :root { 
+            --primary: #0070f3; 
+            --x-black: #000000;
+            --success: #00ba7c;
+            --bg: #f4f7f9;
+            --card-bg: #ffffff;
+            --text-main: #0f1419;
+            --text-sub: #536471;
+        }
         
-        #drop-zone { border: 2px dashed #ddd; border-radius: 12px; padding: 50px 20px; text-align: center; cursor: pointer; transition: 0.2s; background: #fafafa; }
-        #drop-zone:hover { border-color: var(--primary); background: #f0f7ff; }
-        #drop-zone.disabled { opacity: 0.5; pointer-events: none; }
-        
-        #status { margin-top: 20px; text-align: center; font-weight: bold; min-height: 24px; }
-        .error-text { color: var(--error); }
-        
-        #preview-area { display: none; margin-top: 25px; text-align: center; border-top: 1px solid #eee; padding-top: 25px; }
-        video { max-width: 100%; border-radius: 8px; background: #000; margin-bottom: 15px; }
-        
-        .tweet-config { text-align: left; margin-bottom: 20px; }
-        #tweet-text { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
 
-        .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-        .btn { padding: 12px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; text-decoration: none; font-size: 14px; flex: 1; min-width: 140px; text-align: center; }
-        .btn-dl { background: var(--success); color: white; }
-        .btn-tw { background: #000; color: white; }
+        .container { 
+            width: 100%;
+            max-width: 500px; 
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+
+        h1 { font-size: 1.25rem; text-align: center; margin: 0 0 20px; font-weight: 800; }
+
+        #drop-zone { 
+            border: 2px dashed #cfd9de; 
+            border-radius: 16px; 
+            padding: 50px 20px; 
+            text-align: center; 
+            cursor: pointer; 
+            background: #fafafa;
+            transition: 0.2s;
+        }
+        #drop-zone:hover { border-color: var(--primary); background: #f0f7ff; }
+        #drop-zone p { margin: 0; font-weight: bold; }
+        #drop-zone span { font-size: 0.8rem; color: var(--text-sub); display: block; margin-top: 8px; }
+
+        #status { margin: 15px 0; text-align: center; font-weight: bold; font-size: 0.9rem; min-height: 24px; color: var(--primary); }
+
+        #preview-area { display: none; }
+        video { 
+            width: 100%; 
+            border-radius: 12px; 
+            background: #000; 
+            margin-bottom: 20px;
+        }
+
+        .controls { display: flex; flex-direction: column; gap: 15px; }
         
-        .note { font-size: 0.75rem; color: #666; background: #fff9db; padding: 10px; border-radius: 6px; margin-top: 15px; text-align: left; }
+        .input-label { font-size: 0.85rem; font-weight: bold; color: var(--text-sub); margin-bottom: 5px; display: block; }
+        
+        #tweet-text { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #cfd9de; 
+            border-radius: 12px; 
+            font-family: inherit; 
+            font-size: 1rem;
+            box-sizing: border-box;
+            resize: none;
+            background: #fff;
+        }
+
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 5px; }
+        
+        .btn { 
+            padding: 14px; 
+            border-radius: 12px; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 800; 
+            text-decoration: none; 
+            font-size: 1rem; 
+            text-align: center; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        
+        .btn-dl { background: var(--success); color: white; }
+        .btn-tw { background: var(--x-black); color: white; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+
+        .footer-info { 
+            margin-top: 30px;
+            font-size: 0.75rem; 
+            color: var(--text-sub); 
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .reset-link { 
+            display: block; 
+            margin: 20px auto 0; 
+            color: var(--text-sub); 
+            text-decoration: underline; 
+            font-size: 0.8rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>静止画メーカー</h1>
-    
-    <div id="drop-zone">
-        <p>画像をアップロード<br><span style="font-size: 0.8rem; color: #999;">(クリック or ドロップ)</span></p>
-        <input type="file" id="file-input" accept="image/*" style="display: none;">
+    <div class="main-card">
+        <h1>静止画メーカー</h1>
+        
+        <div id="drop-zone">
+            <p>画像をアップロード</p>
+            <span>クリックまたはドロップ</span>
+            <input type="file" id="file-input" accept="image/*" style="display: none;">
+        </div>
+        
+        <div id="status"></div>
+
+        <div id="preview-area">
+            <video id="output-video" controls loop playsinline muted></video>
+            
+            <div class="controls">
+                <div>
+                    <span class="input-label">𝕏 投稿メッセージ</span>
+                    <textarea id="tweet-text" rows="2">画像を動画に変換しました。 #静止画メーカー</textarea>
+                </div>
+
+                <div class="btn-group">
+                    <a id="download-link" class="btn btn-dl">動画を保存する</a>
+                    <button id="tweet-btn" class="btn btn-tw">𝕏でシェア</button>
+                </div>
+            </div>
+            
+            <button onclick="location.reload()" class="reset-link">別の画像を変換する</button>
+        </div>
     </div>
-    
-    <div id="status"></div>
 
-    <div id="preview-area">
-        <video id="output-video" controls loop playsinline></video>
-        
-        <div class="tweet-config">
-            <p style="font-size: 0.8rem; margin-bottom: 5px;">𝕏 投稿メッセージ:</p>
-            <textarea id="tweet-text" rows="3">画像を動画に変換しました。 #静止画メーカー</textarea>
-        </div>
-
-        <div class="btn-group">
-            <a id="download-link" class="btn btn-dl">① 動画を保存</a>
-            <button id="tweet-btn" class="btn btn-tw">② 𝕏でシェア</button>
-        </div>
-        
-        <div class="note">
-            【重要】𝕏(Twitter)の仕様で、動画は自動添付されません。<br>まず「保存」してから「シェア」を押し、アプリ内で保存した動画を選択してください。
-        </div>
-
-        <button onclick="location.reload()" style="margin-top:20px; background:none; border:none; color:#999; text-decoration:underline; cursor:pointer; font-size:0.8rem;">別の画像を試す</button>
+    <div class="footer-info">
+        <p>変換された動画の権利は元の画像の所有者に帰属します。</p>
+        <p>画像や動画はサーバーに一切保存されません。<br>(すべての処理はブラウザ上で行われます)</p>
     </div>
 </div>
 
@@ -70,48 +170,50 @@
     const status = document.getElementById('status');
     const previewArea = document.getElementById('preview-area');
     const videoEl = document.getElementById('output-video');
+    const dlLink = document.getElementById('download-link');
 
     dropZone.onclick = () => fileInput.click();
     fileInput.onchange = (e) => { if (e.target.files[0]) processImage(e.target.files[0]); };
 
+    async function processImage(file) {
+        const buffer = await file.arrayBuffer();
+        const text = new TextDecoder().decode(new Uint8Array(buffer)).toLowerCase();
     const SIGS = [
         "chatgpt", "dall-e", "openai", "google", "gemini", "deepmind", "imagen",
         "grok", "xai", "midjourney", "nijijourney", "stable diffusion", "automatic1111", 
         "comfyui", "novelai", "civitai", "sdxl", "adobe firefly", "bing image creator", 
         "microsoft designer", "generated by", "created with"
     ];
-
-    async function processImage(file) {
-        status.innerText = "検証中...";
-        previewArea.style.display = "none";
-        dropZone.classList.add('disabled');
-
-        const buffer = await file.arrayBuffer();
-        const text = new TextDecoder().decode(new Uint8Array(buffer)).toLowerCase();
         if (SIGS.some(s => text.includes(s))) {
-            status.innerHTML = `<span class="error-text">AI生成画像の可能性があるため利用できません。</span>`;
-            dropZone.classList.remove('disabled');
+            status.innerHTML = `<span style="color:#d93025">AI生成画像の疑いがあるため、ご利用いただけません。</span>`;
             return;
         }
 
         status.innerText = "動画を生成中...";
+        dropZone.style.display = "none";
 
         const img = new Image();
         img.src = URL.createObjectURL(file);
         await new Promise(r => img.onload = r);
-		
+
         const canvas = document.createElement('canvas');
         canvas.width = Math.floor(img.width / 2) * 2;
         canvas.height = Math.floor(img.height / 2) * 2;
         const ctx = canvas.getContext('2d');
 
+        let mimeType = 'video/mp4;codecs=avc1';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/mp4';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp9';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+
         const stream = canvas.captureStream(30);
-        const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=h264') ? 'video/mp4;codecs=h264' : 
-                         MediaRecorder.isTypeSupported('video/webm;codecs=h264') ? 'video/webm;codecs=h264' : 'video/webm';
-        
-        const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
+        const recorder = new MediaRecorder(stream, {
+            mimeType: mimeType,
+            videoBitsPerSecond: 4000000 
+        });
+
         const chunks = [];
-        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
 
         let active = true;
         function draw() {
@@ -126,20 +228,18 @@
             const blob = new Blob(chunks, { type: mimeType });
             const url = URL.createObjectURL(blob);
             const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-
-            videoEl.src = url;
-            previewArea.style.display = "block";
-            status.innerText = "生成完了！";
-
-            const dl = document.getElementById('download-link');
-            dl.href = url;
-            dl.download = `converted_video.${ext}`;
             
-            dropZone.classList.remove('disabled');
+            videoEl.src = url;
+            videoEl.load();
+            previewArea.style.display = "block";
+            status.innerText = "生成が完了しました";
+
+            dlLink.href = url;
+            dlLink.download = `video_${Date.now()}.${ext}`;
         };
 
-        recorder.start();
-        setTimeout(() => recorder.stop(), 3500);
+        recorder.start(100); 
+        setTimeout(() => { if(recorder.state === "recording") recorder.stop(); }, 3200);
     }
 
     document.getElementById('tweet-btn').onclick = () => {
@@ -148,7 +248,7 @@
     };
 
     dropZone.ondragover = (e) => { e.preventDefault(); dropZone.style.borderColor = "var(--primary)"; };
-    dropZone.ondragleave = () => { dropZone.style.borderColor = "#ddd"; };
+    dropZone.ondragleave = () => { dropZone.style.borderColor = "#cfd9de"; };
     dropZone.ondrop = (e) => { e.preventDefault(); processImage(e.dataTransfer.files[0]); };
 </script>
 
