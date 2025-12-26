@@ -4,177 +4,142 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>静止画メーカー</title>
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <style>
-        :root { --primary: #0070f3; --error: #ff4d4f; --success: #28a745; }
-        body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #333; line-height: 1.6; padding: 20px; }
-        .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        h1 { text-align: center; font-size: 1.5rem; margin-bottom: 10px; }
+        :root { --primary: #0070f3; --error: #d93025; --success: #28a745; --bg: #f8f9fa; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        h1 { text-align: center; font-size: 1.5rem; margin-bottom: 30px; }
         
-        .policy-box { background: #f0f7ff; border: 1px solid #cce5ff; padding: 15px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px; }
-        .policy-box ul { margin: 5px 0 0; padding-left: 20px; }
-
-        #drop-zone { border: 2px dashed #ccc; border-radius: 12px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.2s; background: #fafafa; }
+        #drop-zone { border: 2px dashed #ddd; border-radius: 12px; padding: 60px 20px; text-align: center; cursor: pointer; transition: 0.2s; background: #fafafa; }
         #drop-zone:hover { border-color: var(--primary); background: #f0f7ff; }
+        #drop-zone.disabled { opacity: 0.5; pointer-events: none; }
         
-        #status { margin-top: 20px; text-align: center; font-weight: bold; min-height: 24px; }
-        .error-text { color: var(--error); background: #fff1f0; padding: 10px; border-radius: 5px; border: 1px solid var(--error); text-align: left; font-size: 0.9rem; }
+        #status { margin-top: 25px; text-align: center; font-weight: bold; min-height: 24px; font-size: 0.95rem; }
         
-        #preview-area { display: none; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+        .error-text { color: var(--error); padding: 10px; font-weight: bold; }
+        
+        #preview-area { display: none; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 30px; }
         video { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: #000; }
         
-        .btn-group { display: flex; gap: 10px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
+        .btn-group { display: flex; gap: 10px; margin-top: 25px; justify-content: center; flex-wrap: wrap; }
         .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; text-decoration: none; font-size: 14px; transition: 0.2s; }
         .btn-dl { background: var(--success); color: white; }
         .btn-tw { background: #000; color: white; }
         .btn:hover { opacity: 0.8; transform: translateY(-1px); }
         
-        .info { font-size: 0.8rem; color: #666; margin-top: 10px; }
-        
-        #debug-log { margin-top:10px; font-size:0.75rem; color:#999; display:none; text-align:left; max-height:100px; overflow-y:auto; border:1px solid #eee; padding:5px;}
+        .info { font-size: 0.8rem; color: #888; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>静止画メーカー</h1>
-
-    <div class="policy-box">
-        <strong>【安心・安全への取り組み】</strong>
-        <ul>
-            <li><strong>プライバシー保護:</strong> 処理はすべてお客様のブラウザ内で行われます。画像や動画がサーバーに送信・保存されることは一切ありません。</li>
-            <li><strong>権利の帰属:</strong> 本ツールで生成された動画の権利は、すべて利用者に帰属します。</li>
-        </ul>
-    </div>
     
-    <div id="drop-zone">
-        <p>画像をドラッグ＆ドロップ<br><span style="font-size: 0.8rem; color: #888;">またはクリックして選択</span></p>
+    <div id="drop-zone" class="disabled">
+        <p>画像をドラッグ＆ドロップ<br><span style="font-size: 0.85rem; color: #999;">またはクリックして選択</span></p>
         <input type="file" id="file-input" accept="image/*" style="display: none;">
     </div>
 
-    <div id="status"></div>
-    <div id="debug-log"></div>
+    <div id="status">システム準備中...</div>
 
     <div id="preview-area">
-        <h3 style="margin-bottom:10px;">生成プレビュー</h3>
         <video id="output-video" controls loop playsinline></video>
         <div id="res-display" class="info"></div>
         <div class="btn-group">
-            <a id="download-link" class="btn btn-dl">動画を保存する</a>
-            <a id="tweet-link" class="btn btn-tw" target="_blank">𝕏(Twitter)でシェア</a>
+            <a id="download-link" class="btn btn-dl">保存する</a>
+            <a id="tweet-link" class="btn btn-tw" target="_blank">𝕏でシェア</a>
         </div>
-        <button onclick="location.reload()" style="margin-top:20px; background:none; border:none; color:#666; text-decoration:underline; cursor:pointer;">別の画像を変換</button>
+        <button onclick="location.reload()" style="margin-top:20px; background:none; border:none; color:#999; text-decoration:underline; cursor:pointer; font-size:0.8rem;">トップに戻る</button>
     </div>
 </div>
 
 <script>
-    const { createFFmpeg, fetchFile } = FFmpeg;
     let ffmpeg = null;
+    let createFFmpeg, fetchFile;
 
-    const AI_SIGNATURES = [
-        "chatgpt", "dall-e", "openai", 
-        "google", "gemini", "deepmind", "imagen",
-        "grok", "xai",
-        "midjourney", "nijijourney", 
-        "stable diffusion", "automatic1111", "comfyui", "novelai", "civitai", "sdxl",
-        "adobe firefly", "bing image creator", "microsoft designer",
-        "generated by", "created with"
-    ];
-
-    const fileInput = document.getElementById('file-input');
     const dropZone = document.getElementById('drop-zone');
     const status = document.getElementById('status');
+    const fileInput = document.getElementById('file-input');
     const previewArea = document.getElementById('preview-area');
     const videoEl = document.getElementById('output-video');
-    const debugLog = document.getElementById('debug-log');
 
-    dropZone.onclick = () => fileInput.click();
-    fileInput.onchange = (e) => handleUpload(e.target.files[0]);
+    window.onload = async () => {
+        try {
+            if (typeof FFmpeg === 'undefined') throw new Error();
+            createFFmpeg = FFmpeg.createFFmpeg;
+            fetchFile = FFmpeg.fetchFile;
+            status.innerText = ""; 
+            dropZone.classList.remove('disabled');
+        } catch (e) {
+            status.innerHTML = `<div class="error-text">システムエラーが発生しました。再読み込みしてください。</div>`;
+        }
+    };
+
+    dropZone.onclick = () => { if (!dropZone.classList.contains('disabled')) fileInput.click(); };
+    fileInput.onchange = (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); };
     dropZone.ondragover = (e) => { e.preventDefault(); dropZone.style.borderColor = "var(--primary)"; };
-    dropZone.ondragleave = () => { dropZone.style.borderColor = "#ccc"; };
-    dropZone.ondrop = (e) => { e.preventDefault(); handleUpload(e.dataTransfer.files[0]); };
+    dropZone.ondragleave = () => { dropZone.style.borderColor = "#ddd"; };
+    dropZone.ondrop = (e) => { 
+        e.preventDefault(); 
+        if (!dropZone.classList.contains('disabled') && e.dataTransfer.files[0]) {
+            handleUpload(e.dataTransfer.files[0]); 
+        }
+    };
 
     async function handleUpload(file) {
-        if (!file) return;
-        status.innerHTML = "画像データを解析中...";
+        status.innerText = "処理中...";
         previewArea.style.display = "none";
-        debugLog.style.display = "block";
-        debugLog.innerText = "データ読み込み開始...";
 
         try {
-            const result = await checkAI(file);
-            
-            if (result.isAI) {
-                status.innerHTML = `
-                    <div class="error-text">
-                        <strong>AI生成画像と判定されました</strong><br>
-                        検出ワード: 「<b>${result.signature}</b>」<br>
-                        <span style="font-size:0.8em; color:#666;">※画像ファイル内のデータに生成AIの名前が含まれています。</span>
-                    </div>`;
-                debugLog.innerText += `\n検出成功: ${result.signature}`;
+            const isAI = await checkAI(file);
+            if (isAI) {
+                status.innerHTML = `<div class="error-text">AIの疑いを検出したためご利用いただけません。</div>`;
                 return;
-            } else {
-                debugLog.innerText += `\nAIシグネチャなし。処理を続行します。`;
             }
-        } catch(e) {
-            console.warn(e);
-            debugLog.innerText += `\n解析エラー(無視して続行): ${e.message}`;
-        }
-
-        try {
             await generateVideo(file);
         } catch (e) {
-            console.error(e);
-            status.innerHTML = `<div class="error-text">動画生成エラー: ${e.message}</div>`;
+            status.innerHTML = `<div class="error-text">処理中にエラーが発生しました。</div>`;
         }
     }
 
+    const SIGS = [
+        "chatgpt", "dall-e", "openai", "google", "gemini", "deepmind", "imagen",
+        "grok", "xai", "midjourney", "nijijourney", "stable diffusion", "automatic1111", 
+        "comfyui", "novelai", "civitai", "sdxl", "adobe firefly", "bing image creator", 
+        "microsoft designer", "generated by", "created with"
+    ];
+
     async function checkAI(file) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const reader = new FileReader();
-            
             reader.onload = function(e) {
                 try {
-                    const buffer = e.target.result;
-                    const uint8 = new Uint8Array(buffer);
-                   
+                    const uint8 = new Uint8Array(e.target.result);
                     const decoder = new TextDecoder('utf-8', {fatal: false});
-                    const textNormal = decoder.decode(uint8).toLowerCase();
+                    const t1 = decoder.decode(uint8).toLowerCase();
+                    const t2 = new TextDecoder('utf-8').decode(uint8.filter(b => b !== 0)).toLowerCase();
 
-                    const filteredArr = uint8.filter(b => b !== 0);
-                    const textNoNulls = new TextDecoder('utf-8').decode(filteredArr).toLowerCase();
-
-                    debugLog.innerText = "スキャン完了。判定中...";
-
-                    for (const sig of AI_SIGNATURES) {
-                        if (textNormal.includes(sig)) {
-                            resolve({ isAI: true, signature: sig });
-                            return;
-                        }
-                        if (textNoNulls.includes(sig)) {
-                            resolve({ isAI: true, signature: sig + " (WideChar)" });
+                    for (const s of SIGS) {
+                        if (t1.includes(s) || t2.includes(s)) {
+                            resolve(true);
                             return;
                         }
                     }
-                    
-                    resolve({ isAI: false });
-                } catch (err) {
-                    reject(err);
+                    resolve(false);
+                } catch {
+                    resolve(false);
                 }
             };
-            
-            reader.onerror = reject;
             reader.readAsArrayBuffer(file);
         });
     }
 
     async function generateVideo(file) {
-        status.innerText = "変換エンジン起動中...";
-        
         if (!ffmpeg) {
             ffmpeg = createFFmpeg({ 
-                log: true,
-                corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+                log: false,
+                corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
             });
             await ffmpeg.load();
         }
@@ -182,23 +147,14 @@
         const img = new Image();
         img.src = URL.createObjectURL(file);
         await img.decode();
-        const w = img.width;
-        const h = img.height;
-
-        status.innerText = `動画生成中（1秒・${w}x${h}）...`;
         
         const ext = file.name.split('.').pop();
         const inputName = `input.${ext}`;
-        
         ffmpeg.FS('writeFile', inputName, await fetchFile(file));
 
         await ffmpeg.run(
-            '-loop', '1',
-            '-i', inputName,
-            '-t', '1',                    
-            '-c:v', 'libx264',
-            '-crf', '18',                 
-            '-pix_fmt', 'yuv420p',
+            '-loop', '1', '-i', inputName, '-t', '1',                    
+            '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p',
             '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', 
             'output.mp4'
         );
@@ -206,24 +162,19 @@
         const data = ffmpeg.FS('readFile', 'output.mp4');
         const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
 
-        status.innerText = "生成が完了しました！";
-        debugLog.style.display = 'none';
+        status.innerText = "完了しました";
         videoEl.src = url;
-        document.getElementById('res-display').innerText = `解像度: ${w} x ${h} / 長さ: 1秒`;
+        document.getElementById('res-display').innerText = `${img.width} x ${img.height}`;
         previewArea.style.display = "block";
         
-        const dlLink = document.getElementById('download-link');
-        dlLink.href = url;
-        dlLink.download = `video_${Date.now()}.mp4`;
-
-        const tweetLink = document.getElementById('tweet-link');
-        const tweetText = encodeURIComponent("ご利用ありがとうございました");
-        tweetLink.href = `https://twitter.com/intent/tweet?text=${tweetText}`;
+        const dl = document.getElementById('download-link');
+        dl.href = url;
+        dl.download = `video_${Date.now()}.mp4`;
         
-        try {
-            ffmpeg.FS('unlink', inputName);
-            ffmpeg.FS('unlink', 'output.mp4');
-        } catch(e){}
+        const txt = encodeURIComponent("画像を動画に変換しました。");
+        document.getElementById('tweet-link').href = `https://twitter.com/intent/tweet?text=${txt}`;
+        
+        try { ffmpeg.FS('unlink', inputName); ffmpeg.FS('unlink', 'output.mp4'); } catch(e){}
     }
 </script>
 
