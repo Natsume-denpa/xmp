@@ -20,12 +20,19 @@
         #preview-area { display: none; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 30px; }
         video { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: #000; }
         
-        .btn-group { display: flex; gap: 10px; margin-top: 25px; justify-content: center; flex-wrap: wrap; }
-        .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; text-decoration: none; font-size: 14px; transition: 0.2s; }
-        .btn-dl { background: var(--success); color: white; }
-        .btn-tw { background: #000; color: white; }
+        /* ツイート入力エリア */
+        .tweet-config { margin-top: 20px; text-align: left; }
+        .tweet-config label { font-size: 0.85rem; font-weight: bold; color: #666; }
+        #tweet-text { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; margin-top: 5px; box-sizing: border-box; resize: vertical; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; text-decoration: none; font-size: 14px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-dl { background: var(--success); color: white; flex: 1; min-width: 150px; }
+        .btn-tw { background: #000; color: white; flex: 1; min-width: 150px; }
         .btn:hover { opacity: 0.8; transform: translateY(-1px); }
+        
         .info { font-size: 0.8rem; color: #888; margin-top: 10px; }
+        .step-note { font-size: 0.75rem; color: #666; margin-top: 15px; background: #eee; padding: 10px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -36,15 +43,29 @@
         <p>画像をドラッグ＆ドロップ<br><span style="font-size: 0.85rem; color: #999;">またはクリックして選択</span></p>
         <input type="file" id="file-input" accept="image/*" style="display: none;">
     </div>
+    
     <div id="status"></div>
+
     <div id="preview-area">
         <video id="output-video" controls loop playsinline></video>
         <div id="res-display" class="info"></div>
-        <div class="btn-group">
-            <a id="download-link" class="btn btn-dl">保存する</a>
-            <a id="tweet-link" class="btn btn-tw" target="_blank">𝕏でシェア</a>
+
+        <div class="tweet-config">
+            <label for="tweet-text">𝕏 投稿メッセージ:</label>
+            <textarea id="tweet-text" rows="3">画像を動画に変換しました。 #静止画メーカー</textarea>
         </div>
-        <button onclick="location.reload()" style="margin-top:20px; background:none; border:none; color:#999; text-decoration:underline; cursor:pointer; font-size:0.8rem;">トップに戻る</button>
+
+        <div class="btn-group">
+            <a id="download-link" class="btn btn-dl">① 動画を保存</a>
+            <button id="tweet-btn" class="btn btn-tw">② 𝕏でシェア</button>
+        </div>
+        
+        <div class="step-note">
+            ※𝕏の仕様上、動画は自動で添付されません。<br>
+            「保存」した後に「シェア」ボタンを押し、投稿画面で動画を選択してください。
+        </div>
+
+        <button onclick="location.reload()" style="margin-top:30px; background:none; border:none; color:#999; text-decoration:underline; cursor:pointer; font-size:0.8rem;">別の画像を変換する</button>
     </div>
 </div>
 
@@ -54,6 +75,8 @@
     const fileInput = document.getElementById('file-input');
     const previewArea = document.getElementById('preview-area');
     const videoEl = document.getElementById('output-video');
+    const tweetBtn = document.getElementById('tweet-btn');
+    const tweetText = document.getElementById('tweet-text');
 
     dropZone.onclick = () => { if (!dropZone.classList.contains('disabled')) fileInput.click(); };
     fileInput.onchange = (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); };
@@ -67,14 +90,14 @@
     };
 
     async function handleUpload(file) {
-        status.innerText = "処理中...";
+        status.innerText = "動画を生成中...";
         previewArea.style.display = "none";
         dropZone.classList.add('disabled');
 
         try {
             const isAI = await checkAI(file);
             if (isAI) {
-                status.innerHTML = `<div class="error-text">AIの疑いを検出したためご利用いただけません。</div>`;
+                status.innerHTML = `<div class="error-text">AI生成画像の疑いがあるため処理を中断しました。</div>`;
                 dropZone.classList.remove('disabled');
                 return;
             }
@@ -89,7 +112,7 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            const stream = canvas.captureStream(30); // 30fps
+            const stream = canvas.captureStream(30); 
             const recorder = new MediaRecorder(stream, {
                 mimeType: MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm'
             });
@@ -101,28 +124,33 @@
                 const blob = new Blob(chunks, { type: chunks[0].type });
                 const url = URL.createObjectURL(blob);
                 
-                status.innerText = "完了しました";
+                status.innerText = "生成完了！";
                 videoEl.src = url;
-                document.getElementById('res-display').innerText = `${canvas.width} x ${canvas.height}`;
+                document.getElementById('res-display').innerText = `解像度: ${canvas.width} x ${canvas.height}`;
                 previewArea.style.display = "block";
                 
                 const dl = document.getElementById('download-link');
                 dl.href = url;
                 dl.download = `video_${Date.now()}.${blob.type.includes('mp4') ? 'mp4' : 'webm'}`;
                 
-                const txt = encodeURIComponent("画像を動画に変換しました。");
-                document.getElementById('tweet-link').href = `https://twitter.com/intent/tweet?text=${txt}`;
                 dropZone.classList.remove('disabled');
             };
 
             recorder.start();
-            setTimeout(() => recorder.stop(), 1000);
+            setTimeout(() => recorder.stop(), 3100);
 
         } catch (e) {
+            console.error(e);
             dropZone.classList.remove('disabled');
-            status.innerHTML = `<div class="error-text">処理中にエラーが発生しました。</div>`;
+            status.innerHTML = `<div class="error-text">エラーが発生しました。</div>`;
         }
     }
+
+    tweetBtn.onclick = () => {
+        const text = encodeURIComponent(tweetText.value);
+        const url = `https://twitter.com/intent/tweet?text=${text}`;
+        window.open(url, '_blank');
+    };
 
     const SIGS = [
         "chatgpt", "dall-e", "openai", "google", "gemini", "deepmind", "imagen",
