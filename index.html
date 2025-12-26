@@ -4,54 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>静止画メーカー</title>
+    <script src="https://cdn.jsdelivr.net/npm/fix-webm-duration@1.0.5/fix-webm-duration.js"></script>
     <style>
-        :root { 
-            --primary: #0070f3; 
-            --x-black: #000000;
-            --success: #00ba7c;
-            --bg: #f4f7f9;
-            --card-bg: #ffffff;
-            --text-main: #0f1419;
-            --text-sub: #536471;
-        }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Segoe UI", Roboto, sans-serif; 
-            background: var(--bg); 
-            color: var(--text-main); 
-            margin: 0; padding: 0;
-            display: flex; justify-content: center;
-            min-height: 100vh;
-        }
+        :root { --primary: #0070f3; --x-black: #000; --success: #00ba7c; --bg: #f4f7f9; --text-main: #0f1419; --text-sub: #536471; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 450px; }
+        .main-card { background: #fff; border-radius: 20px; padding: 25px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
+        h1 { font-size: 1.2rem; text-align: center; margin: 0 0 20px; font-weight: 800; }
 
-        .container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
-        .main-card { background: var(--card-bg); border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        h1 { font-size: 1.25rem; text-align: center; margin: 0 0 20px; font-weight: 800; }
+        .setting-box { background: #f0f3f5; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .setting-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
 
-        #drop-zone { border: 2px dashed #cfd9de; border-radius: 16px; padding: 50px 20px; text-align: center; cursor: pointer; background: #fafafa; transition: 0.2s; }
-        #drop-zone:hover { border-color: var(--primary); background: #f0f7ff; }
+        #drop-zone { border: 2px dashed #cfd9de; border-radius: 16px; padding: 50px 10px; text-align: center; cursor: pointer; background: #fafafa; transition: 0.2s; }
+        #drop-zone:hover { border-color: var(--primary); }
         #drop-zone p { margin: 0; font-weight: bold; }
-        #drop-zone span { font-size: 0.8rem; color: var(--text-sub); display: block; margin-top: 8px; }
+        #drop-zone span { font-size: 0.75rem; color: var(--text-sub); display: block; margin-top: 5px; }
 
         #status { margin: 15px 0; text-align: center; font-weight: bold; font-size: 0.9rem; min-height: 24px; color: var(--primary); }
-
         #preview-area { display: none; }
         video { width: 100%; border-radius: 12px; background: #000; margin-bottom: 20px; }
 
-        .controls { display: flex; flex-direction: column; gap: 15px; }
-        .input-label { font-size: 0.85rem; font-weight: bold; color: var(--text-sub); margin-bottom: 5px; display: block; }
-        
-        #tweet-text { width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 12px; font-family: inherit; font-size: 1rem; box-sizing: border-box; resize: none; }
-
-        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 5px; }
-        .btn { padding: 14px; border-radius: 12px; border: none; cursor: pointer; font-weight: 800; text-decoration: none; font-size: 1rem; text-align: center; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        
+        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; cursor: pointer; font-weight: 800; font-size: 1rem; margin-bottom: 12px; display: block; text-align: center; text-decoration: none; box-sizing: border-box; transition: 0.2s; }
         .btn-dl { background: var(--success); color: white; }
         .btn-tw { background: var(--x-black); color: white; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-
-        .footer-info { margin-top: 30px; font-size: 0.75rem; color: var(--text-sub); line-height: 1.6; text-align: center; }
-        .reset-link { display: block; margin: 20px auto 0; color: var(--text-sub); text-decoration: underline; font-size: 0.8rem; border: none; background: none; cursor: pointer; }
+        .btn:active { transform: scale(0.98); }
+        
+        #tweet-text { width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 12px; font-family: inherit; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; resize: none; }
+        .footer { font-size: 0.7rem; color: var(--text-sub); text-align: center; margin-top: 30px; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -59,11 +39,18 @@
 <div class="container">
     <div class="main-card">
         <h1>静止画メーカー</h1>
-        
-        <div id="drop-zone">
-            <p>画像をアップロード</p>
-            <span>クリックまたはドロップ</span>
-            <input type="file" id="file-input" accept="image/*" style="display: none;">
+
+        <div id="setup-area">
+            <div class="setting-box">
+                <div class="setting-label"><span>再生時間</span><span id="duration-val">5秒</span></div>
+                <input type="range" id="duration-slider" min="3" max="10" value="5">
+                <div style="font-size: 0.65rem; color: #666; margin-top: 5px;">※𝕏投稿でのエラー防止のため5秒推奨</div>
+            </div>
+            <div id="drop-zone">
+                <p>画像をアップロード</p>
+                <span>クリックまたはドロップ</span>
+                <input type="file" id="file-input" accept="image/*" style="display: none;">
+            </div>
         </div>
         
         <div id="status"></div>
@@ -71,25 +58,19 @@
         <div id="preview-area">
             <video id="output-video" controls loop playsinline muted></video>
             
-            <div class="controls">
-                <div>
-                    <span class="input-label">𝕏 投稿メッセージ</span>
-                    <textarea id="tweet-text" rows="2">画像を動画に変換しました。 #静止画メーカー</textarea>
-                </div>
-
-                <div class="btn-group">
-                    <a id="download-link" class="btn btn-dl">動画を保存する</a>
-                    <button id="tweet-btn" class="btn btn-tw">𝕏でシェア</button>
-                </div>
-            </div>
+            <div style="text-align: left; margin-bottom: 5px; font-size: 0.8rem; font-weight: bold; color: var(--text-sub);">𝕏 投稿本文</div>
+            <textarea id="tweet-text" rows="2">画像を動画に変換しました。 #静止画メーカー</textarea>
             
-            <button onclick="location.reload()" class="reset-link">別の画像を変換する</button>
+            <a id="download-link" class="btn btn-dl">動画を保存する</a>
+            <button id="tweet-btn" class="btn btn-tw">𝕏でシェア</button>
+            
+            <button onclick="location.reload()" style="background:none; border:none; color:#999; text-decoration:underline; width:100%; font-size:0.8rem; cursor:pointer;">別の画像を変換する</button>
         </div>
     </div>
 
-    <div class="footer-info">
-        <p>変換された動画の権利は元の画像の所有者に帰属します。</p>
-        <p>画像や動画はサーバーに一切保存されません。</p>
+    <div class="footer">
+        変換された動画の権利は元の画像の所有者に帰属します。<br>
+        データはサーバーに保存されず、ブラウザ内で完結します。
     </div>
 </div>
 
@@ -98,29 +79,19 @@
     const fileInput = document.getElementById('file-input');
     const status = document.getElementById('status');
     const previewArea = document.getElementById('preview-area');
+    const setupArea = document.getElementById('setup-area');
     const videoEl = document.getElementById('output-video');
     const dlLink = document.getElementById('download-link');
+    const durationSlider = document.getElementById('duration-slider');
+    const durationVal = document.getElementById('duration-val');
 
+    durationSlider.oninput = () => { durationVal.innerText = `${durationSlider.value}秒`; };
     dropZone.onclick = () => fileInput.click();
     fileInput.onchange = (e) => { if (e.target.files[0]) processImage(e.target.files[0]); };
 
-    function fixWebmDuration(blob, duration) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const buffer = e.target.result;
-                const view = new DataView(buffer);
-                resolve(new Blob([buffer], { type: blob.type }));
-            };
-            reader.readAsArrayBuffer(blob);
-        });
-    }
-
     async function processImage(file) {
-        const buffer = await file.arrayBuffer();
-        const text = new TextDecoder().decode(new Uint8Array(buffer)).toLowerCase();
     const SIGS = [
-        "dall-e", "openai", 
+        "dall-e", "openai", "grok",
         "midjourney", "nijijourney",
         "stable diffusion", "automatic1111", "comfyui", "sdxl", "civitai", "dreamstudio",
         "novelai",
@@ -128,13 +99,16 @@
         "bing image creator", "microsoft designer",
         "google gemini", "google deepmind", "imagen"
     ];
+        const buffer = await file.arrayBuffer();
+        const text = new TextDecoder().decode(new Uint8Array(buffer)).toLowerCase();
         if (SIGS.some(s => text.includes(s))) {
-            status.innerHTML = `<span style="color:#d93025">AI生成画像の疑いがあるため利用不可</span>`;
+            status.innerHTML = `<span style="color:#d32f2f">AI生成画像は利用できません。</span>`;
             return;
         }
 
+        const sec = parseInt(durationSlider.value);
         status.innerText = "動画を生成中...";
-        dropZone.style.display = "none";
+        setupArea.style.display = "none";
 
         const img = new Image();
         img.src = URL.createObjectURL(file);
@@ -145,46 +119,36 @@
         canvas.height = Math.floor(img.height / 2) * 2;
         const ctx = canvas.getContext('2d');
 
+        // 録画設定（𝕏互換）
         let mimeType = 'video/mp4;codecs=avc1';
         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=h264';
         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
 
         const stream = canvas.captureStream(30);
-        const recorder = new MediaRecorder(stream, {
-            mimeType: mimeType,
-            videoBitsPerSecond: 3000000 
-        });
-
+        const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3000000 });
         const chunks = [];
         recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
 
+        const startTime = Date.now();
+
         let active = true;
-        function draw() {
-            if (!active) return;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            requestAnimationFrame(draw);
-        }
+        const draw = () => { if(active) { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); requestAnimationFrame(draw); }};
         draw();
 
         recorder.onstop = async () => {
             active = false;
-            let finalBlob = new Blob(chunks, { type: mimeType });
-            
-            const url = URL.createObjectURL(finalBlob);
-            
-            videoEl.src = url;
-            videoEl.onloadedmetadata = () => {
-                if (videoEl.duration === Infinity) {
-                    videoEl.currentTime = 1e101;
-                    videoEl.ontimeupdate = () => {
-                        videoEl.currentTime = 0;
-                        videoEl.ontimeupdate = null;
-                    };
-                }
-            };
+            const duration = Date.now() - startTime;
+            let blob = new Blob(chunks, { type: mimeType });
 
+            if (mimeType.includes('webm')) {
+                blob = await ysFixWebmDuration(blob, duration);
+            }
+
+            const url = URL.createObjectURL(blob);
+            videoEl.src = url;
+            
             previewArea.style.display = "block";
-            status.innerText = "完了！保存して投稿してください";
+            status.innerText = "生成が完了しました";
 
             dlLink.href = url;
             const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
@@ -192,7 +156,7 @@
         };
 
         recorder.start(100); 
-        setTimeout(() => { if(recorder.state === "recording") recorder.stop(); }, 10000);
+        setTimeout(() => { if(recorder.state === "recording") recorder.stop(); }, sec * 1000);
     }
 
     document.getElementById('tweet-btn').onclick = () => {
