@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>静止画メーカー</title>
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exifreader@4.23.0/dist/exif-reader.min.js"></script>
+    
     <style>
         :root { --primary: #0070f3; --error: #ff4d4f; --success: #28a745; }
         body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #333; line-height: 1.6; padding: 20px; }
@@ -19,7 +21,8 @@
         
         #status { margin-top: 20px; text-align: center; font-weight: bold; min-height: 24px; }
         .error-text { color: var(--error); background: #fff1f0; padding: 10px; border-radius: 5px; border: 1px solid var(--error); }
-        
+        .ai-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.9em;}
+
         #preview-area { display: none; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
         video { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: #000; }
         
@@ -68,7 +71,11 @@
     const { createFFmpeg, fetchFile } = FFmpeg;
     let ffmpeg = null;
     
-    const AI_KEYWORDS = ["stable diffusion", "midjourney", "dall-e", "novelai", "adobe firefly", "comfyui", "automatic1111", "civitai"];
+    const AI_SIGNATURES = [
+        "stable diffusion", "midjourney", "novelai", "dall-e", "comfyui", 
+        "automatic1111", "civitai", "nijijourney", "adobe firefly"
+    ];
+
     const fileInput = document.getElementById('file-input');
     const dropZone = document.getElementById('drop-zone');
     const status = document.getElementById('status');
@@ -83,16 +90,23 @@
 
     async function handleUpload(file) {
         if (!file) return;
-        status.innerHTML = "処理中...";
+        status.innerHTML = "チェック中...";
         previewArea.style.display = "none";
         
         try {
-            const isAI = await checkAI(file);
-            if (isAI) {
-                status.innerHTML = `<div class="error-text">AI生成の疑いがあるため、ご利用いただけません。</div>`;
+            const aiCheckResult = await checkAI(file);
+            if (aiCheckResult.isAI) {
+                status.innerHTML = `
+                    <div class="error-text">
+                        <strong>AI生成画像の可能性があります</strong><br>
+                        検出理由: ${aiCheckResult.reason}<br>
+                        <span style="font-size:0.8em">※AI生成画像を素材として利用することはご遠慮ください。</span>
+                    </div>`;
                 return;
             }
-        } catch(e) { console.warn(e); }
+        } catch(e) { 
+            console.warn("AI check failed:", e); 
+        }
 
         try {
             await generateVideo(file);
@@ -103,15 +117,45 @@
     }
 
     async function checkAI(file) {
-        const slice = file.slice(0, 512 * 1024);
-        const text = await slice.text(); 
-        const lowText = text.toLowerCase();
-        return AI_KEYWORDS.some(kw => lowText.includes(kw));
+        try {
+            const tags = await ExifReader.load(file);
+            console.log("Metadata Tags:", tags);
+
+            const keysToCheck = ['Software', 'parameters', 'UserComment', 'Description', 'Comment', 'Model'];
+
+            for (const key of keysToCheck) {
+                if (tags[key]) {
+                    let value = "";
+                    if (tags[key].description) value = tags[key].description;
+                    else if (tags[key].value) value = String(tags[key].value);
+                    else if (Array.isArray(tags[key])) value = tags[key].join(" ");
+                    else value = String(tags[key]);
+                    
+                    const lowerValue = value.toLowerCase();
+
+                    for (const sig of AI_SIGNATURES) {
+                        if (lowerValue.includes(sig)) {
+                            return { isAI: true, reason: `メタデータ(${key})に "${sig}" を検出` };
+                        }
+                    }
+                }
+            }
+            
+            if (tags['parameters']) {
+                 return { isAI: true, reason: `Stable Diffusionの生成パラメータを検出` };
+            }
+
+            return { isAI: false };
+
+        } catch (error) {
+            console.log("Metadata read error or no metadata:", error);
+            return { isAI: false };
+        }
     }
 
     async function generateVideo(file) {
         if (!ffmpeg) {
-            status.innerText = "変換エンジン起動中(初回は時間がかかります)...";
+            status.innerText = "変換エンジン起動中";
             ffmpeg = createFFmpeg({ 
                 log: true,
                 corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
@@ -132,7 +176,6 @@
         
         ffmpeg.FS('writeFile', inputName, await fetchFile(file));
 
-        // 実行
         await ffmpeg.run(
             '-loop', '1',
             '-i', inputName,
@@ -157,7 +200,7 @@
         dlLink.download = `video_${Date.now()}.mp4`;
 
         const tweetLink = document.getElementById('tweet-link');
-        const tweetText = encodeURIComponent("画像を1秒の高品質動画に変換しました。");
+        const tweetText = encodeURIComponent("ご利用ありがとうございました。");
         tweetLink.href = `https://twitter.com/intent/tweet?text=${tweetText}`;
         
         try {
